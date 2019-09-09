@@ -1,0 +1,124 @@
+---
+title: "ReproducibleResearchProject_1"
+author: "Peter Varga"
+date: '2019 szeptember 7 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+
+activity<-read.csv("repdata_data_activity/activity.csv")
+
+
+library(plyr)
+library(dplyr)
+
+table_activity<-tbl_df(activity)
+
+by_date<-group_by(table_activity,date)
+
+
+by_date_sum_steps<-summarise(by_date,sum(steps,na.rm = TRUE))
+
+hist(by_date_sum_steps$`sum(steps, na.rm = TRUE)`)
+mean( by_date_sum_steps$`sum(steps, na.rm = TRUE)` )
+median( by_date_sum_steps$`sum(steps, na.rm = TRUE)` )
+
+
+by_interval<-group_by(table_activity,interval)
+
+
+by_interval_mean_steps<-summarise(by_interval,mean(steps,na.rm = TRUE))
+plot(by_interval_mean_steps$`mean(steps, na.rm = TRUE)`,type="l")
+
+
+max<-max(by_interval_mean_steps$`mean(steps, na.rm = TRUE)`)
+w<-which(by_interval_mean_steps$`mean(steps, na.rm = TRUE)`==max)
+activity[w,3]
+
+sum(is.na(activity$steps) )
+
+
+
+# imputing missing values
+activity_imv<-activity
+for (i in 1:nrow(activity_imv))
+{
+  if (is.na(activity_imv[i,"steps"]) )
+  {
+    
+    missing_interval<-activity_imv[i,"interval"]
+    w2<-which(by_interval_mean_steps$interval==missing_interval)[1]
+    activity_imv[i,"steps"]<-as.integer( trunc(by_interval_mean_steps[w2,2]) )
+  } 
+}
+
+
+
+
+
+
+table_activity_imv<-tbl_df(activity_imv)
+
+by_date_imv<-group_by(table_activity_imv,date)
+by_date_imv_sum_steps<-summarise(by_date_imv,sum(steps))
+hist(by_date_imv_sum_steps$`sum(steps)`)
+mean(by_date_imv_sum_steps$`sum(steps)`)
+median(by_date_imv_sum_steps$`sum(steps)`)
+
+
+
+Sys.setlocale("LC_TIME", "English")
+
+
+
+wd<-weekdays(as.Date(as.character(activity_imv$date)))
+weekend<-(wd=="Saturday")|(wd=="Sunday")
+
+
+weekend_factor<-revalue( as.factor(weekend),c("TRUE"="weekend","FALSE"="weekday") )
+
+weekend_activity<-activity_imv[weekend_factor=="weekend",]
+weekday_activity<-activity_imv[weekend_factor=="weekday",]
+
+table_weekend_activity<-tbl_df(weekend_activity)
+weekend_by_interval<-group_by(table_weekend_activity,interval)
+weekend_by_interval_mean_steps<-summarise(weekend_by_interval,mean(steps))
+
+
+table_weekday_activity<-tbl_df(weekday_activity)
+weekday_by_interval<-group_by(table_weekday_activity,interval)
+weekday_by_interval_mean_steps<-summarise(weekday_by_interval,mean(steps))
+
+par(mfrow=c(2,1))
+
+plot(weekend_by_interval_mean_steps$`mean(steps)`,type="l",main = "weekend",ylab = "")
+plot(weekday_by_interval_mean_steps$`mean(steps)`,type="l",main = "weekday",ylab = "")
+
+plot.new()
+```
+
